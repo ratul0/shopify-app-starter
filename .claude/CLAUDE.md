@@ -107,6 +107,21 @@ The `extensions/` directory is a Bun workspace. Scaffold new extensions (theme b
 - **Auth redirect**: `/api/auth`
 - **Distribution**: AppStore
 
+## Documentation Sync (MANDATORY)
+
+When a task changes any of the following, update `README.md` to reflect the change:
+
+- **Tech stack** (database, framework, package manager, etc.)
+- **Prerequisites** (new system dependencies like Docker, Node version bumps, etc.)
+- **Available scripts** (added/removed/renamed npm/bun scripts)
+- **Environment variables** (new vars, changed defaults, removed vars)
+- **Project structure** (new top-level files/directories, renamed routes)
+- **Getting started flow** (changed setup steps, new required config)
+- **Database setup** (provider changes, new infra requirements)
+- **Deployment** (Dockerfile changes, new env vars needed in production)
+
+The README is the first thing contributors and onboarding developers read. It must stay accurate.
+
 ## Post-Task Validation (MANDATORY)
 
 After completing any task (feature, bugfix, refactor, etc.), always run both checks before considering the work done:

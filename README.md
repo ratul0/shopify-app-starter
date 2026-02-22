@@ -8,7 +8,7 @@ A batteries-included starter for building [Shopify embedded apps](https://shopif
 | --- | --- |
 | Framework | [React Router v7](https://reactrouter.com/) (file-based routing) |
 | UI | [Polaris web components](https://shopify.dev/docs/api/app-home/polaris-web-components) via App Bridge |
-| Database | [Prisma](https://www.prisma.io/) + SQLite (swappable) |
+| Database | [Prisma](https://www.prisma.io/) + PostgreSQL (via Docker Compose) |
 | Auth | [@shopify/shopify-app-react-router](https://shopify.dev/docs/api/shopify-app-react-router) (OAuth handled automatically) |
 | Linting | [Biome](https://biomejs.dev/) via [Ultracite](https://github.com/haydenbleasel/ultracite) |
 | Package Manager | [Bun](https://bun.sh/) |
@@ -17,6 +17,7 @@ A batteries-included starter for building [Shopify embedded apps](https://shopif
 ## Prerequisites
 
 - [Bun](https://bun.sh/) v1+
+- [Docker](https://docs.docker.com/get-docker/) (for local PostgreSQL)
 - [Shopify CLI](https://shopify.dev/docs/apps/tools/cli) v3+
 - A [Shopify Partner account](https://partners.shopify.com/signup) and a dev store
 
@@ -31,8 +32,8 @@ bun install
 # 2. Connect to your Shopify app
 shopify app config link
 
-# 3. Start developing
-shopify app dev
+# 3. Start developing (starts PostgreSQL via Docker Compose automatically)
+bun run dev
 ```
 
 Press **P** in the terminal to open your app in the browser. Install the app on your dev store when prompted.
@@ -57,6 +58,7 @@ app/
 prisma/
   schema.prisma         # Database schema (Session model)
   migrations/           # Prisma migrations
+docker-compose.yml      # Local PostgreSQL setup
 extensions/             # Shopify app extensions (themes, functions, etc.)
 ```
 
@@ -139,13 +141,17 @@ This scaffolds a new extension in the `extensions/` directory (theme blocks, che
 
 | Script | Description |
 | --- | --- |
-| `bun run dev` | Start dev server via Shopify CLI |
+| `bun run dev` | Start PostgreSQL + dev server via Shopify CLI |
 | `bun run build` | Production build |
 | `bun run lint` | Check for lint errors |
 | `bun run fix` | Auto-fix lint and formatting |
 | `bun run typecheck` | Run TypeScript type checking |
 | `bun run deploy` | Deploy app config to Shopify |
 | `bun run setup` | Generate Prisma client + run migrations |
+| `bun run infra:up` | Start PostgreSQL (Docker Compose) |
+| `bun run infra:down` | Stop PostgreSQL |
+| `bun run infra:reset` | Nuke database and re-migrate |
+| `bun run infra:studio` | Open Prisma Studio (database GUI) |
 
 ## Environment Variables
 
@@ -156,24 +162,29 @@ Shopify CLI manages most env vars automatically during `shopify app dev`. For ma
 | `SHOPIFY_API_KEY` | App API key | (from Partner Dashboard) |
 | `SHOPIFY_API_SECRET` | App API secret | (from Partner Dashboard) |
 | `SHOPIFY_APP_URL` | Public app URL | `https://my-app.fly.dev` |
-| `DATABASE_URL` | Prisma database connection | `file:dev.sqlite` |
+| `DATABASE_URL` | Prisma database connection | `postgresql://postgres:postgres@localhost:5432/clear_duplicate` |
 | `NODE_ENV` | Environment | `production` |
 
-For local development, create a `.env` file in the project root:
+For local development, copy `.env.example` to `.env`:
 
-```
-DATABASE_URL="file:dev.sqlite"
+```sh
+cp .env.example .env
 ```
 
 ## Database
 
-This starter uses SQLite by default. To switch to PostgreSQL or MySQL:
+Local development uses PostgreSQL via Docker Compose (`docker-compose.yml`). The `bun run dev` command starts the database automatically before launching the Shopify CLI.
 
-1. Update the `provider` in `prisma/schema.prisma`
-2. Update `DATABASE_URL` in your `.env`
-3. Run `bunx prisma migrate dev`
+Useful database commands:
 
-See Prisma's [datasource docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#datasource) for connection string formats.
+```sh
+bun run infra:up       # Start PostgreSQL
+bun run infra:down     # Stop PostgreSQL
+bun run infra:reset    # Nuke data + re-migrate
+bun run infra:studio   # Open Prisma Studio (database GUI)
+```
+
+For production, point `DATABASE_URL` to an external PostgreSQL instance (e.g., RDS, Supabase, Neon).
 
 ## Deployment
 
@@ -185,7 +196,7 @@ docker run -p 3000:3000 \
   -e SHOPIFY_API_KEY=xxx \
   -e SHOPIFY_API_SECRET=xxx \
   -e SHOPIFY_APP_URL=https://my-app.example.com \
-  -e DATABASE_URL=file:prod.sqlite \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/dbname \
   -e NODE_ENV=production \
   my-shopify-app
 ```
@@ -206,7 +217,7 @@ This project includes config for AI coding tools:
 ## Troubleshooting
 
 **`Environment variable not found: DATABASE_URL`**
-Create a `.env` file in the project root with `DATABASE_URL="file:dev.sqlite"`.
+Copy `.env.example` to `.env`: `cp .env.example .env`.
 
 **`The table main.Session does not exist`**
 Run `bun run setup` to generate the Prisma client and run migrations.
