@@ -15,6 +15,7 @@ database.sqlite
 
 .env
 .env.*
+!.env.example
 
 # Personal AI tool settings (keep shared config, ignore local overrides)
 .claude/settings.local.json
