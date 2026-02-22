@@ -122,6 +122,35 @@ When a task changes any of the following, update `README.md` to reflect the chan
 
 The README is the first thing contributors and onboarding developers read. It must stay accurate.
 
+## Frontend & React Quality Skills (MANDATORY)
+
+When working on frontend code (React components, routes, UI, styling, layout, or anything in `app/routes/` that renders JSX), invoke the relevant skills **before writing or modifying code**:
+
+| Skill | When to use |
+| --- | --- |
+| `/frontend-design` | Creating or redesigning any UI — pages, components, layouts. Ensures high design quality and avoids generic AI aesthetics. |
+| `/vercel-react-best-practices` | Writing, reviewing, or refactoring React components. Covers performance patterns, data fetching, and bundle optimization. |
+| `/vercel-composition-patterns` | Building reusable component APIs, refactoring prop-heavy components, designing compound components or context providers. |
+| `/web-design-guidelines` | Reviewing existing UI for accessibility, UX, and design compliance. Use after building UI to audit the result. |
+
+**Rules:**
+- For any task that touches `.tsx` files with JSX, invoke **at least** `/vercel-react-best-practices`.
+- When creating new pages or significant UI, also invoke `/frontend-design`.
+- When designing component APIs or refactoring component architecture, also invoke `/vercel-composition-patterns`.
+- After completing UI work, run `/web-design-guidelines` as a final audit pass.
+- Multiple skills can (and should) be invoked for the same task when relevant.
+
+## Research via Subagents (MANDATORY)
+
+Always delegate research and exploration to **subagents** (Task tool) to keep the main conversation context slim:
+
+- **Codebase exploration** — Use `subagent_type=Explore` to search for files, understand patterns, or trace code paths. Do not perform multi-step Glob/Grep/Read sequences in the main context.
+- **Documentation lookup** — Use `subagent_type=general-purpose` to research libraries, APIs, or Shopify docs.
+- **Parallel research** — Launch multiple subagents concurrently when investigating independent questions.
+- **Main context is for decisions and code** — The main session should focus on planning, writing code, and communicating with the user. All exploratory reading belongs in subagents.
+
+**Exception:** A single direct Read/Glob/Grep call is fine when you already know the exact file or pattern. Only escalate to subagents when the search requires multiple steps or broad exploration.
+
 ## Post-Task Validation (MANDATORY)
 
 After completing any task (feature, bugfix, refactor, etc.), always run both checks before considering the work done:

@@ -8,6 +8,7 @@ import type {
 } from "react-router";
 import { useFetcher } from "react-router";
 import { authenticate } from "../shopify.server";
+import { createShopifyClient } from "../shopify-api-client.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -16,11 +17,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
+  const client = createShopifyClient(admin, session.shop);
   const color = ["Red", "Orange", "Yellow", "Green"][
     Math.floor(Math.random() * 4)
   ];
-  const response = await admin.graphql(
+  const response = await client.graphql(
     `#graphql
       mutation populateProduct($product: ProductCreateInput!) {
         productCreate(product: $product) {
@@ -62,7 +64,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
   const variantId = firstEdge.node.id;
 
-  const variantResponse = await admin.graphql(
+  const variantResponse = await client.graphql(
     `#graphql
     mutation shopifyReactRouterTemplateUpdateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
       productVariantsBulkUpdate(productId: $productId, variants: $variants) {
