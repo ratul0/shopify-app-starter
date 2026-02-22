@@ -1,0 +1,12 @@
+.cache
+build
+node_modules
+.git
+.claude
+.cursor
+.gemini
+.zed
+.vscode
+*.md
+.env
+.env.*
