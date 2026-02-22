@@ -1,123 +1,125 @@
-# Ultracite Code Standards
+# CLAUDE.md
 
-This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Quick Reference
+## Project Overview
 
-- **Format code**: `bun x ultracite fix`
-- **Check for issues**: `bun x ultracite check`
-- **Diagnose setup**: `bun x ultracite doctor`
+Shopify embedded app built with React Router v7, Prisma, and Polaris web components. Uses Bun as the package manager.
 
-Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
+## Commands
 
----
+| Task | Command |
+| --- | --- |
+| Dev server (via Shopify CLI) | `bun run dev` |
+| Production build | `bun run build` |
+| Start production server | `bun run start` |
+| Lint check | `bun run lint` |
+| Auto-fix lint/format | `bun run fix` |
+| Type check | `bun run typecheck` |
+| Prisma setup (generate + migrate) | `bun run setup` |
+| New migration | `bunx prisma migrate dev --name describe-change` |
+| Deploy app config to Shopify | `bun run deploy` |
+| Generate app extension | `bun run generate extension` |
 
-## Core Principles
+Lefthook runs `bun x ultracite fix` on pre-commit automatically. Code quality is enforced by Biome via the Ultracite preset.
 
-Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
+## Architecture
 
-### Type Safety & Explicitness
+### Routing (React Router v7 file-based)
 
-- Use explicit types for function parameters and return values when they enhance clarity
-- Prefer `unknown` over `any` when the type is genuinely unknown
-- Use const assertions (`as const`) for immutable values and literal types
-- Leverage TypeScript's type narrowing instead of type assertions
-- Use meaningful variable names instead of magic numbers - extract constants with descriptive names
+Routes live in `app/routes/`. File naming determines URL structure:
 
-### Modern JavaScript/TypeScript
+- **`app.tsx`** — Authenticated shell (AppProvider + `<s-app-nav>`). All `app.*` routes render inside its `<Outlet>`.
+- **`app._index.tsx`** → `/app` (home page, inside auth shell)
+- **`app.additional.tsx`** → `/app/additional` (inside auth shell)
+- **`_index/route.tsx`** → `/` (public landing page, unauthenticated)
+- **`auth.login/route.tsx`** → `/auth/login`
+- **`auth.$.tsx`** → `/auth/*` (OAuth callback catch-all)
+- **`webhooks.*.tsx`** → POST-only action routes for Shopify webhooks
 
-- Use arrow functions for callbacks and short functions
-- Prefer `for...of` loops over `.forEach()` and indexed `for` loops
-- Use optional chaining (`?.`) and nullish coalescing (`??`) for safer property access
-- Prefer template literals over string concatenation
-- Use destructuring for object and array assignments
-- Use `const` by default, `let` only when reassignment is needed, never `var`
+**To add a new authenticated page**: create `app/routes/app.my-page.tsx` (the `app.` prefix nests it inside the auth shell) and add a nav link in `app.tsx`.
 
-### Async & Promises
+### Authentication & API Access
 
-- Always `await` promises in async functions - don't forget to use the return value
-- Use `async/await` syntax instead of promise chains for better readability
-- Handle errors appropriately in async code with try-catch blocks
-- Don't use async functions as Promise executors
+`app/shopify.server.ts` is the central auth config. It exports:
 
-### React & JSX
+- `authenticate.admin(request)` — Call in every loader/action that needs the Shopify Admin API. Returns `{ admin }` with a GraphQL client.
+- `authenticate.webhook(request)` — Validates webhook requests. Returns `{ payload, topic, shop, session }`.
+- `login(request)` — Initiates OAuth flow.
 
-- Use function components over class components
-- Call hooks at the top level only, never conditionally
-- Specify all dependencies in hook dependency arrays correctly
-- Use the `key` prop for elements in iterables (prefer unique IDs over array indices)
-- Nest children between opening and closing tags instead of passing as props
-- Don't define components inside other components
-- Use semantic HTML and ARIA attributes for accessibility:
-  - Provide meaningful alt text for images
-  - Use proper heading hierarchy
-  - Add labels for form inputs
-  - Include keyboard event handlers alongside mouse events
-  - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
+Pattern for authenticated routes:
+```ts
+import { authenticate } from "../shopify.server";
 
-### Error Handling & Debugging
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+  const response = await admin.graphql(`{ shop { name } }`);
+  const { data } = await response.json();
+  return data;
+};
+```
 
-- Remove `console.log`, `debugger`, and `alert` statements from production code
-- Throw `Error` objects with descriptive messages, not strings or other values
-- Use `try-catch` blocks meaningfully - don't catch errors just to rethrow them
-- Prefer early returns over nested conditionals for error cases
+### Server-Only Files
 
-### Code Organization
+Files ending in `.server.ts` are excluded from the client bundle by React Router:
+- `app/shopify.server.ts` — Shopify auth config, API clients, session storage
+- `app/db.server.ts` — Prisma client singleton (prevents multiple instances during hot reload)
 
-- Keep functions focused and under reasonable cognitive complexity limits
-- Extract complex conditions into well-named boolean variables
-- Use early returns to reduce nesting
-- Prefer simple conditionals over nested ternary operators
-- Group related code together and separate concerns
+### Database
 
-### Security
+Prisma with SQLite (swappable to PostgreSQL/MySQL by changing the provider in `prisma/schema.prisma`). Currently has a single `Session` model used for OAuth session storage. Add app-specific models to the same schema.
 
-- Add `rel="noopener"` when using `target="_blank"` on links
-- Avoid `dangerouslySetInnerHTML` unless absolutely necessary
-- Don't use `eval()` or assign directly to `document.cookie`
-- Validate and sanitize user input
+### UI: Polaris Web Components
 
-### Performance
+This app uses **Polaris web components** (lowercase `<s-*>` tags), NOT React Polaris components. Examples:
+```tsx
+<s-page heading="Title">
+  <s-button onClick={handler}>Click me</s-button>
+  <s-text-field label="Name" name="name" />
+  <s-section heading="Section">
+    <s-paragraph>Content</s-paragraph>
+  </s-section>
+</s-page>
+```
 
-- Avoid spread syntax in accumulators within loops
-- Use top-level regex literals instead of creating them in loops
-- Prefer specific imports over namespace imports
-- Avoid barrel files (index files that re-export everything)
-- Use proper image components (e.g., Next.js `<Image>`) over `<img>` tags
+Types come from `@shopify/polaris-types` (included in tsconfig). Navigation uses `<s-link>` inside `<s-app-nav>`.
 
-### Framework-Specific Guidance
+### Webhooks
 
-**Next.js:**
-- Use Next.js `<Image>` component for images
-- Use `next/head` or App Router metadata API for head elements
-- Use Server Components for async data fetching instead of async Client Components
+Registered in `shopify.app.toml` under `[[webhooks.subscriptions]]`. Each gets a corresponding route file (e.g., `webhooks.app.uninstalled.tsx`). Run `bun run deploy` to sync webhook config with Shopify.
 
-**React 19+:**
-- Use ref as a prop instead of `React.forwardRef`
+### GraphQL Codegen
 
-**Solid/Svelte/Vue/Qwik:**
-- Use `class` and `for` attributes (not `className` or `htmlFor`)
+Configured in `.graphqlrc.ts` for Admin API. Scans `app/**/*.{js,ts,jsx,tsx}` for inline GraphQL and outputs types to `app/types/`.
 
----
+### App Extensions
 
-## Testing
+The `extensions/` directory is a Bun workspace. Scaffold new extensions (theme blocks, checkout UI, functions) with `bun run generate extension`.
 
-- Write assertions inside `it()` or `test()` blocks
-- Avoid done callbacks in async tests - use async/await instead
-- Don't use `.only` or `.skip` in committed code
-- Keep test suites reasonably flat - avoid excessive `describe` nesting
+## Shopify App Config
 
-## When Biome Can't Help
+- **API version**: `2026-04` (in `shopify.app.toml`), GraphQL codegen uses `October25`
+- **Scopes**: `write_products` (modify in `shopify.app.toml`)
+- **Auth redirect**: `/api/auth`
+- **Distribution**: AppStore
 
-Biome's linter will catch most issues automatically. Focus your attention on:
+## Post-Task Validation (MANDATORY)
 
-1. **Business logic correctness** - Biome can't validate your algorithms
-2. **Meaningful naming** - Use descriptive names for functions, variables, and types
-3. **Architecture decisions** - Component structure, data flow, and API design
-4. **Edge cases** - Handle boundary conditions and error states
-5. **User experience** - Accessibility, performance, and usability considerations
-6. **Documentation** - Add comments for complex logic, but prefer self-documenting code
+After completing any task (feature, bugfix, refactor, etc.), always run both checks before considering the work done:
 
----
+```sh
+bun run fix        # auto-fix lint/format issues
+bun run typecheck  # ensure no type errors
+```
 
-Most formatting and common issues are automatically fixed by Biome. Run `bun x ultracite fix` before committing to ensure compliance.
+The project must remain free of lint and type errors at all times. Do not leave broken state for the next task.
+
+## Code Standards
+
+This project uses **Ultracite** (Biome-based). See `AGENTS.md` for the full coding standards reference.
+
+Key rules:
+- Arrow functions, `for...of`, `async/await`, destructuring, `const` by default
+- No `console.log`/`debugger` in production code
+- Function components with hooks at top level
+- `unknown` over `any`, const assertions for immutable values
