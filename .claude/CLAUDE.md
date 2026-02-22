@@ -10,7 +10,7 @@ Shopify embedded app built with React Router v7, Prisma, and Polaris web compone
 
 | Task | Command |
 | --- | --- |
-| Dev server (via Shopify CLI) | `bun run dev` |
+| Dev server (starts infra + Shopify CLI) | `bun run dev` |
 | Production build | `bun run build` |
 | Start production server | `bun run start` |
 | Lint check | `bun run lint` |
@@ -18,6 +18,10 @@ Shopify embedded app built with React Router v7, Prisma, and Polaris web compone
 | Type check | `bun run typecheck` |
 | Prisma setup (generate + migrate) | `bun run setup` |
 | New migration | `bunx prisma migrate dev --name describe-change` |
+| Start infrastructure (PostgreSQL) | `bun run infra:up` |
+| Stop infrastructure | `bun run infra:down` |
+| Reset infrastructure (nuke data) | `bun run infra:reset` |
+| Database GUI | `bun run infra:studio` |
 | Deploy app config to Shopify | `bun run deploy` |
 | Generate app extension | `bun run generate extension` |
 
@@ -67,7 +71,7 @@ Files ending in `.server.ts` are excluded from the client bundle by React Router
 
 ### Database
 
-Prisma with SQLite (swappable to PostgreSQL/MySQL by changing the provider in `prisma/schema.prisma`). Currently has a single `Session` model used for OAuth session storage. Add app-specific models to the same schema.
+PostgreSQL via Docker Compose for local development (`docker-compose.yml`). `bun run dev` starts PostgreSQL automatically before launching the Shopify CLI. Production uses an external PostgreSQL instance (RDS, Supabase, etc.). Prisma ORM with a single `Session` model for OAuth session storage. Add app-specific models to `prisma/schema.prisma`.
 
 ### UI: Polaris Web Components
 
